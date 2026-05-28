@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frontend Design Skill — 统一前端设计系统</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Flip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"></script>
+  <style>
+    :root {
+      --c-cyan: #00f0ff;
+      --c-magenta: #ff00a0;
+      --c-yellow: #f0ff00;
+      --c-bg: #0a0a0f;
+      --c-bg-alt: #111118;
+      --c-surface: #1a1a24;
+      --c-text: #e8e8f0;
+      --c-text-muted: #8a8a9a;
+      --c-border: rgba(255,255,255,0.08);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    #particleCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    #binaryRainCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.12;
+    }
+
+    .scanlines {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 9998;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,240,255,0.015) 2px,
+        rgba(0,240,255,0.015) 4px
+      );
+    }
+
+    .floating-nav {
+      position: fixed;
+      top: 20px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      padding: 12px 28px;
+      background: rgba(10,10,15,0.7);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--c-border);
+      border-radius: 50px;
+      opacity: 0;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-logo {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--c-cyan), var(--c-magenta));
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .nav-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .nav-links a {
+      color: var(--c-text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      transition: color 0.3s;
+      position: relative;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0;
+      width: 0; height: 2px;
+      background: var(--c-cyan);
+      transition: width 0.3s;
+    }
+
+    .nav-links a:hover {
+      color: var(--c-cyan);
+    }
+
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .hero-bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 900px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      background: rgba(0,240,255,0.08);
+      border: 1px solid rgba(0,240,255,0.2);
+      border-radius: 50px;
+      margin-bottom: 32px;
+      opacity: 0;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .badge-dot {
+      width: 8px; height: 8px;
+      background: var(--c-cyan);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .badge-text {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--c-cyan);
+    }
+
+    .hero-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(32px, 6.5vw, 80px);
+      line-height: 1.15;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      position: relative;
+      font-weight: 400;
+    }
+
+    .tech-bracket {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--c-cyan);
+      opacity: 0.5;
+      font-size: 0.75em;
+      vertical-align: text-top;
+      text-shadow: 0 0 20px var(--c-cyan);
+    }
+
+    .bracket-left { margin-right: 8px; }
+    .bracket-right { margin-left: 8px; }
+
+    .terminal-cursor {
+      display: inline-block;
+      width: 3px;
+      height: 0.85em;
+      background: var(--c-cyan);
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: blink-cursor 1s step-end infinite;
+      box-shadow: 0 0 10px var(--c-cyan);
+    }
+
+    @keyframes blink-cursor {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .title-line {
+      display: block;
+      opacity: 0;
+    }
+
+    .title-line-1 {
+      background: linear-gradient(135deg, #fff 0%, var(--c-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 40px rgba(0,240,255,0.3);
+    }
+
+    .title-line-2 {
+      background: linear-gradient(135deg, var(--c-cyan) 0%, var(--c-magenta) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 40px rgba(255,0,160,0.3);
+    }
+
+    .title-line-3 {
+      color: var(--c-yellow);
+      text-shadow: 0 0 40px rgba(240,255,0,0.3);
+    }
+
+    .skill-highlight {
+      position: relative;
+      display: inline-block;
+    }
+
+    .skill-highlight::after {
+      content: '';
+      position: absolute;
+      bottom: 2px; left: -4px;
+      width: calc(100% + 8px); height: 6px;
+      background: linear-gradient(90deg, var(--c-cyan), var(--c-magenta));
+      opacity: 0.25;
+      border-radius: 1px;
+    }
+
+    .hero-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(18px, 2.5vw, 28px);
+      color: var(--c-text-muted);
+      margin-bottom: 16px;
+      opacity: 0;
+      letter-spacing: 2px;
+    }
+
+    .hero-desc {
+      font-size: 15px;
+      color: var(--c-text-muted);
+      max-width: 560px;
+      margin: 0 auto 40px;
+      opacity: 0;
+      line-height: 1.7;
+    }
+
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      text-align: center;
+      opacity: 0;
+    }
+
+    .stat-num {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(32px, 5vw, 56px);
+      font-weight: 700;
+      line-height: 1;
+      background: linear-gradient(135deg, #fff, var(--c-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--c-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      opacity: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: none;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--c-cyan), var(--c-magenta));
+      color: #fff;
+      box-shadow: 0 8px 32px rgba(0,240,255,0.2);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0,240,255,0.3);
+    }
+
+    .btn-secondary {
+      background: var(--c-surface);
+      color: var(--c-text);
+      border: 1px solid var(--c-border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--c-cyan);
+      color: var(--c-cyan);
+      transform: translateY(-2px);
+    }
+
+    .hero-scroll-hint {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+    }
+
+    .scroll-mouse {
+      width: 24px; height: 38px;
+      border: 2px solid var(--c-text-muted);
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .scroll-wheel {
+      width: 4px; height: 8px;
+      background: var(--c-cyan);
+      border-radius: 2px;
+      position: absolute;
+      top: 6px; left: 50%;
+      transform: translateX(-50%);
+      animation: scroll-wheel 1.5s ease-in-out infinite;
+    }
+
+    @keyframes scroll-wheel {
+      0% { opacity: 1; top: 6px; }
+      100% { opacity: 0; top: 20px; }
+    }
+
+    .hero-scroll-hint span {
+      font-size: 11px;
+      color: var(--c-text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .section-number {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: var(--c-cyan);
+      border: 1px solid rgba(0,240,255,0.3);
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(24px, 3.5vw, 42px);
+      margin-bottom: 12px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #fff, var(--c-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
+    }
+
+    .section-desc {
+      font-size: 16px;
+      color: var(--c-text-muted);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .file-tree-section {
+      position: relative;
+      z-index: 1;
+      padding: 120px 24px;
+      background: var(--c-bg-alt);
+    }
+
+    .file-tree-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .file-tree-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .file-tree {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .tree-root {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--c-border);
+    }
+
+    .folder-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: var(--c-text);
+    }
+
+    .tree-children {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tree-folder {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 1px solid transparent;
+    }
+
+    .tree-folder:hover {
+      background: rgba(0,240,255,0.05);
+      border-color: rgba(0,240,255,0.15);
+    }
+
+    .folder-count {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--c-text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .file-detail-panels {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .detail-panel {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 16px;
+      padding: 20px;
+      opacity: 0;
+      transform: translateX(30px);
+    }
+
+    .detail-panel h3 {
+      font-size: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--c-cyan);
+      background: rgba(0,240,255,0.1);
+      padding: 2px 10px;
+      border-radius: 10px;
+    }
+
+    .panel-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .panel-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--c-text-muted);
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .panel-item:last-child {
+      border-bottom: none;
+    }
+
+    .item-icon {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .panel-item em {
+      margin-left: auto;
+      font-style: normal;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--c-text);
+    }
+
+    .modules-section {
+      position: relative;
+      z-index: 1;
+      padding: 120px 24px;
+      background: var(--c-bg);
+    }
+
+    .modules-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .module-card {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 20px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.4s ease;
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .module-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 3px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+
+    .module-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--accent);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px color-mix(in srgb, var(--accent) 15%, transparent);
+    }
+
+    .module-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .module-card::after {
+      content: '';
+      position: absolute;
+      top: -50%; right: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+
+    .module-card:hover::after {
+      opacity: 1;
+    }
+
+    .module-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      margin-bottom: 12px;
+      opacity: 0.7;
+    }
+
+    .module-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .module-desc {
+      font-size: 14px;
+      color: var(--c-text-muted);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .module-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .module-tags span {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .demo-section {
+      position: relative;
+      z-index: 1;
+      padding: 120px 24px;
+      background: var(--c-bg-alt);
+      overflow: hidden;
+    }
+
+    .demo-stage {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 400px;
+      perspective: 800px;
+      margin-bottom: 64px;
+    }
+
+    .demo-box {
+      width: 200px; height: 200px;
+      position: relative;
+      transform-style: preserve-3d;
+    }
+
+    .demo-face {
+      position: absolute;
+      width: 200px; height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      border: 2px solid;
+      border-radius: 12px;
+      backface-visibility: visible;
+    }
+
+    .demo-face-front {
+      background: rgba(0,240,255,0.15);
+      border-color: var(--c-cyan);
+      transform: translateZ(100px);
+    }
+
+    .demo-face-back {
+      background: rgba(255,0,160,0.15);
+      border-color: var(--c-magenta);
+      transform: rotateY(180deg) translateZ(100px);
+    }
+
+    .demo-face-left {
+      background: rgba(240,255,0,0.15);
+      border-color: var(--c-yellow);
+      transform: rotateY(-90deg) translateZ(100px);
+    }
+
+    .demo-face-right {
+      background: rgba(0,240,255,0.15);
+      border-color: var(--c-cyan);
+      transform: rotateY(90deg) translateZ(100px);
+    }
+
+    .demo-face-top {
+      background: rgba(255,0,160,0.15);
+      border-color: var(--c-magenta);
+      transform: rotateX(90deg) translateZ(100px);
+    }
+
+    .demo-face-bottom {
+      background: rgba(240,255,0,0.15);
+      border-color: var(--c-yellow);
+      transform: rotateX(-90deg) translateZ(100px);
+    }
+
+    .demo-features {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-item {
+      text-align: center;
+      padding: 32px 24px;
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 16px;
+      transition: all 0.3s;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .feature-item:hover {
+      transform: translateY(-4px);
+      border-color: var(--c);
+    }
+
+    .feature-icon {
+      width: 64px; height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--c) 12%, transparent);
+      color: var(--c);
+      border: 1px solid color-mix(in srgb, var(--c) 20%, transparent);
+      transition: all 0.3s;
+    }
+
+    .feature-item:hover .feature-icon {
+      box-shadow: 0 0 30px color-mix(in srgb, var(--c) 20%, transparent);
+    }
+
+    .feature-item h4 {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .feature-item p {
+      font-size: 13px;
+      color: var(--c-text-muted);
+    }
+
+    .sources-section {
+      position: relative;
+      z-index: 1;
+      padding: 120px 24px;
+      background: var(--c-bg);
+      overflow: hidden;
+    }
+
+    .sources-ticker {
+      margin-bottom: 64px;
+      overflow: hidden;
+    }
+
+    .ticker-row {
+      display: flex;
+      gap: 24px;
+      white-space: nowrap;
+      padding: 16px 0;
+    }
+
+    .ticker-row-1 {
+      animation: ticker-left 30s linear infinite;
+    }
+
+    .ticker-row-2 {
+      animation: ticker-right 35s linear infinite;
+    }
+
+    .ticker-row span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      padding: 8px 20px;
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 50px;
+      color: var(--c-text-muted);
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+
+    .ticker-row span:hover {
+      color: var(--c-cyan);
+      border-color: var(--c-cyan);
+      background: rgba(0,240,255,0.05);
+    }
+
+    @keyframes ticker-left {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    @keyframes ticker-right {
+      0% { transform: translateX(-50%); }
+      100% { transform: translateX(0); }
+    }
+
+    .sources-grid {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 24px;
+    }
+
+    .source-group {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: 16px;
+      padding: 24px;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .source-group h4 {
+      font-size: 14px;
+      color: var(--c-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .source-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .source-tag {
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(0,240,255,0.08);
+      color: var(--c-cyan);
+      border: 1px solid rgba(0,240,255,0.15);
+      transition: all 0.3s;
+      cursor: default;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .source-tag:hover {
+      background: rgba(0,240,255,0.15);
+      transform: scale(1.05);
+    }
+
+    .site-footer {
+      position: relative;
+      z-index: 1;
+      padding: 64px 24px 32px;
+      background: var(--c-bg-alt);
+      border-top: 1px solid var(--c-border);
+    }
+
+    .footer-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-logo {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--c-cyan), var(--c-magenta));
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .footer-brand p {
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      color: var(--c-text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s;
+    }
+
+    .footer-links a:hover {
+      color: var(--c-cyan);
+    }
+
+    .footer-bottom {
+      text-align: center;
+      padding-top: 24px;
+      border-top: 1px solid var(--c-border);
+    }
+
+    .footer-bottom p {
+      font-size: 12px;
+      color: var(--c-text-muted);
+      letter-spacing: 0.5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .cursor-glow {
+      position: fixed;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,240,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: opacity 0.3s;
+    }
+
+    @media (max-width: 768px) {
+      .floating-nav {
+        gap: 16px;
+        padding: 10px 18px;
+      }
+      .nav-title { display: none; }
+      .nav-links { gap: 16px; }
+      .hero-stats { gap: 24px; }
+      .hero-title { letter-spacing: 3px; }
+      .modules-grid { grid-template-columns: 1fr; }
+      .demo-features { grid-template-columns: 1fr 1fr; }
+      .sources-grid { grid-template-columns: 1fr; }
+      .tech-bracket { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="particleCanvas"></canvas>
+  <canvas id="binaryRainCanvas"></canvas>
+  <div class="scanlines"></div>
+
+  <nav class="floating-nav">
+    <div class="nav-brand">
+      <span class="nav-logo">FD</span>
+      <span class="nav-title">Frontend Design</span>
+    </div>
+    <div class="nav-links">
+      <a href="#modules" data-scroll>模块</a>
+      <a href="#files" data-scroll>文件</a>
+      <a href="#sources" data-scroll>来源</a>
+      <a href="#demo" data-scroll>演示</a>
+    </div>
+  </nav>
+
+  <section class="hero" id="hero">
+    <div class="hero-bg-grid"></div>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span class="badge-text">20+ Skills Unified</span>
+      </div>
+      <h1 class="hero-title">
+        <span class="title-line title-line-1"><span class="tech-bracket bracket-left">[</span>Frontend</span>
+        <span class="title-line title-line-2">Design</span>
+        <span class="title-line title-line-3"><span class="skill-highlight">Skill</span><span class="tech-bracket bracket-right">]</span><span class="terminal-cursor"></span></span>
+      </h1>
+      <p class="hero-subtitle">统一前端设计系统</p>
+      <p class="hero-desc">
+        将 20+ 个独立设计 Skill 整合为单一完备的设计-编码系统。<br>
+        覆盖设计思考、视觉规范、动效交互、设计系统、UX 研究、UI 评审全链路。
+      </p>
+      <div class="hero-stats">
+        <div class="stat-item" data-count="223">
+          <span class="stat-num">0</span>
+          <span class="stat-label">文件</span>
+        </div>
+        <div class="stat-item" data-count="12">
+          <span class="stat-num">0</span>
+          <span class="stat-label">核心模块</span>
+        </div>
+        <div class="stat-item" data-count="26">
+          <span class="stat-num">0</span>
+          <span class="stat-label">脚本</span>
+        </div>
+        <div class="stat-item" data-count="95">
+          <span class="stat-num">0</span>
+          <span class="stat-label">参考文档</span>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <a href="https://github.com/sunyifeisb-art/frontend-design-skill" target="_blank" class="btn btn-primary">
+          <span>GitHub</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          </svg>
+        </a>
+        <a href="#modules" class="btn btn-secondary" data-scroll>探索模块</a>
+      </div>
+    </div>
+    <div class="hero-scroll-hint">
+      <div class="scroll-mouse">
+        <div class="scroll-wheel"></div>
+      </div>
+      <span>向下滚动</span>
+    </div>
+  </section>
+
+  <section class="file-tree-section" id="files">
+    <div class="section-header">
+      <span class="section-number">01</span>
+      <h2 class="section-title">文件结构</h2>
+      <p class="section-desc">223 个文件，6 大类别，完整的设计-编码资源库</p>
+    </div>
+    <div class="file-tree-container">
+      <div class="file-tree">
+        <div class="tree-folder tree-root">
+          <div class="folder-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <span class="folder-name">frontend-design/</span>
+        </div>
+        <div class="tree-children">
+          <div class="tree-folder" data-files="95">
+            <div class="folder-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff00a0" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <span class="folder-name">references/</span>
+            <span class="folder-count">95 文档</span>
+          </div>
+          <div class="tree-folder" data-files="26">
+            <div class="folder-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f0ff00" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
+            <span class="folder-name">scripts/</span>
+            <span class="folder-count">26 脚本</span>
+          </div>
+          <div class="tree-folder" data-files="58">
+            <div class="folder-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <span class="folder-name">data/</span>
+            <span class="folder-count">58 数据</span>
+          </div>
+          <div class="tree-folder" data-files="2">
+            <div class="folder-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff00a0" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg></div>
+            <span class="folder-name">templates/</span>
+            <span class="folder-count">2 模板</span>
+          </div>
+          <div class="tree-folder" data-files="42">
+            <div class="folder-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f0ff00" stroke-width="2"><text x="4" y="18" font-size="16" font-weight="bold">Aa</text></svg></div>
+            <span class="folder-name">canvas-fonts/</span>
+            <span class="folder-count">42 字体</span>
+          </div>
+        </div>
+      </div>
+      <div class="file-detail-panels">
+        <div class="detail-panel" data-panel="references">
+          <h3>references/ <span class="panel-count">95</span></h3>
+          <div class="panel-items">
+            <div class="panel-item"><span class="item-icon" style="background:#00f0ff20;color:#00f0ff">UI</span>ui-audit/ <em>32</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#ff00a020;color:#ff00a0">DE</span>design/ <em>18</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#f0ff0020;color:#f0ff00">DS</span>design-system/ <em>7</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#00f0ff20;color:#00f0ff">BR</span>brand/ <em>11</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#ff00a020;color:#ff00a0">SL</span>slides/ <em>5</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#f0ff0020;color:#f0ff00">BN</span>banner-design/ <em>1</em></div>
+          </div>
+        </div>
+        <div class="detail-panel" data-panel="scripts">
+          <h3>scripts/ <span class="panel-count">26</span></h3>
+          <div class="panel-items">
+            <div class="panel-item"><span class="item-icon" style="background:#00f0ff20;color:#00f0ff">PY</span>ui-ux-pro-max/ <em>3</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#ff00a020;color:#ff00a0">PY</span>design/cip/ <em>4</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#f0ff0020;color:#f0ff00">PY</span>design/logo/ <em>3</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#00f0ff20;color:#00f0ff">PY</span>design/icon/ <em>1</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#ff00a020;color:#ff00a0">JS</span>design-system/ <em>9</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#f0ff0020;color:#f0ff00">JS</span>brand/ <em>4</em></div>
+          </div>
+        </div>
+        <div class="detail-panel" data-panel="data">
+          <h3>data/ <span class="panel-count">58</span></h3>
+          <div class="panel-items">
+            <div class="panel-item"><span class="item-icon" style="background:#00f0ff20;color:#00f0ff">CSV</span>ui-ux-pro-max/ <em>38</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#ff00a020;color:#ff00a0">CSV</span>design/cip/ <em>4</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#f0ff0020;color:#f0ff00">CSV</span>design/logo/ <em>3</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#00f0ff20;color:#00f0ff">CSV</span>design/icon/ <em>1</em></div>
+            <div class="panel-item"><span class="item-icon" style="background:#ff00a020;color:#ff00a0">CSV</span>design-system/ <em>8</em></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="modules-section" id="modules">
+    <div class="section-header">
+      <span class="section-number">02</span>
+      <h2 class="section-title">12 核心模块</h2>
+      <p class="section-desc">从需求分流到最终交付的完整设计-编码流水线</p>
+    </div>
+    <div class="modules-grid">
+      <div class="module-card" style="--accent:#00f0ff">
+        <div class="module-num">01</div>
+        <h3 class="module-title">需求分流</h3>
+        <p class="module-desc">平台、技术栈、页面类型、目标与约束的快速判定</p>
+        <div class="module-tags"><span>Triage</span></div>
+      </div>
+      <div class="module-card" style="--accent:#ff00a0">
+        <div class="module-num">02</div>
+        <h3 class="module-title">设计思考</h3>
+        <p class="module-desc">内容优先、风格锁定、差异化定位、编码前写作</p>
+        <div class="module-tags"><span>Design Thinking</span></div>
+      </div>
+      <div class="module-card" style="--accent:#f0ff00">
+        <div class="module-num">03</div>
+        <h3 class="module-title">内容策略</h3>
+        <p class="module-desc">落地页结构、应用/仪表盘布局、文案规则、图像策略</p>
+        <div class="module-tags"><span>Content Strategy</span></div>
+      </div>
+      <div class="module-card" style="--accent:#00f0ff">
+        <div class="module-num">04</div>
+        <h3 class="module-title">视觉设计</h3>
+        <p class="module-desc">排版、色彩、布局、背景与深度规范</p>
+        <div class="module-tags"><span>Visual Design</span></div>
+      </div>
+      <div class="module-card" style="--accent:#ff00a0">
+        <div class="module-num">05</div>
+        <h3 class="module-title">动效交互</h3>
+        <p class="module-desc">CSS 动画、Framer Motion、GSAP 完整系统</p>
+        <div class="module-tags"><span>Motion</span><span>GSAP</span></div>
+      </div>
+      <div class="module-card" style="--accent:#f0ff00">
+        <div class="module-num">06</div>
+        <h3 class="module-title">组件按钮</h3>
+        <p class="module-desc">可访问基元、按钮分类体系、变体模式</p>
+        <div class="module-tags"><span>Components</span></div>
+      </div>
+      <div class="module-card" style="--accent:#00f0ff">
+        <div class="module-num">07</div>
+        <h3 class="module-title">设计系统</h3>
+        <p class="module-desc">Token 生成、色阶、排版尺度、断点、组件架构</p>
+        <div class="module-tags"><span>Design System</span></div>
+      </div>
+      <div class="module-card" style="--accent:#ff00a0">
+        <div class="module-num">08</div>
+        <h3 class="module-title">UX 研究</h3>
+        <p class="module-desc">用户画像、旅程地图、可用性测试、研究综合</p>
+        <div class="module-tags"><span>UX Research</span></div>
+      </div>
+      <div class="module-card" style="--accent:#f0ff00">
+        <div class="module-num">09</div>
+        <h3 class="module-title">UI 评审</h3>
+        <p class="module-desc">量化评分、React 性能审计、Web Interface Guidelines</p>
+        <div class="module-tags"><span>UI Audit</span></div>
+      </div>
+      <div class="module-card" style="--accent:#00f0ff">
+        <div class="module-num">10</div>
+        <h3 class="module-title">反模式</h3>
+        <p class="module-desc">美学/布局反模式、失败模式、明确禁止项</p>
+        <div class="module-tags"><span>Anti-patterns</span></div>
+      </div>
+      <div class="module-card" style="--accent:#ff00a0">
+        <div class="module-num">11</div>
+        <h3 class="module-title">最终检查</h3>
+        <p class="module-desc">交付前 10 项必检清单</p>
+        <div class="module-tags"><span>Litmus Checks</span></div>
+      </div>
+      <div class="module-card" style="--accent:#f0ff00">
+        <div class="module-num">12</div>
+        <h3 class="module-title">输出标准</h3>
+        <p class="module-desc">代码交付的完整要求与规范</p>
+        <div class="module-tags"><span>Output Standards</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo-section" id="demo">
+    <div class="section-header">
+      <span class="section-number">03</span>
+      <h2 class="section-title">动效演示</h2>
+      <p class="section-desc">本页面使用 GSAP 构建的动画系统，展示 Skill 中的动效规范</p>
+    </div>
+    <div class="demo-stage">
+      <div class="demo-box" id="demoBox">
+        <div class="demo-face demo-face-front">ScrollTrigger</div>
+        <div class="demo-face demo-face-back">Timeline</div>
+        <div class="demo-face demo-face-left">Stagger</div>
+        <div class="demo-face demo-face-right">Flip</div>
+        <div class="demo-face demo-face-top">MatchMedia</div>
+        <div class="demo-face demo-face-bottom">Plugins</div>
+      </div>
+    </div>
+    <div class="demo-features">
+      <div class="feature-item">
+        <div class="feature-icon" style="--c:#00f0ff">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h4>ScrollTrigger</h4>
+        <p>滚动驱动动画，pin、scrub、batch</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon" style="--c:#ff00a0">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h4>Timeline</h4>
+        <p>时间轴序列、标签、嵌套</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon" style="--c:#f0ff00">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h4>Flip</h4>
+        <p>FLIP 布局过渡</p>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon" style="--c:#00f0ff">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <h4>SplitText</h4>
+        <p>逐字/逐词/逐行动画</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sources-section" id="sources">
+    <div class="section-header">
+      <span class="section-number">04</span>
+      <h2 class="section-title">来源 Skill</h2>
+      <p class="section-desc">整合自 20+ 个独立设计 Skill 的精华</p>
+    </div>
+    <div class="sources-ticker">
+      <div class="ticker-row ticker-row-1">
+        <span>frontend-design</span><span>frontend-design-3</span><span>frontend-skill</span>
+        <span>human-optimized-frontend</span><span>interaction-design</span><span>ui-design-system</span>
+        <span>ui-skills</span><span>ui-audit</span><span>ui-ux-pro-max</span><span>ux-researcher-designer</span>
+        <span>web-design-guidelines</span><span>pinak-frontend-guru</span>
+        <span>frontend-design</span><span>frontend-design-3</span><span>frontend-skill</span>
+        <span>human-optimized-frontend</span><span>interaction-design</span><span>ui-design-system</span>
+        <span>ui-skills</span><span>ui-audit</span><span>ui-ux-pro-max</span><span>ux-researcher-designer</span>
+        <span>web-design-guidelines</span><span>pinak-frontend-guru</span>
+      </div>
+      <div class="ticker-row ticker-row-2">
+        <span>gsap-core</span><span>gsap-timeline</span><span>gsap-scrolltrigger</span>
+        <span>gsap-react</span><span>gsap-plugins</span><span>gsap-utils</span>
+        <span>gsap-frameworks</span><span>gsap-performance</span>
+        <span>design</span><span>design-system</span><span>brand</span><span>slides</span>
+        <span>banner-design</span><span>ui-styling</span>
+        <span>gsap-core</span><span>gsap-timeline</span><span>gsap-scrolltrigger</span>
+        <span>gsap-react</span><span>gsap-plugins</span><span>gsap-utils</span>
+        <span>gsap-frameworks</span><span>gsap-performance</span>
+        <span>design</span><span>design-system</span><span>brand</span><span>slides</span>
+        <span>banner-design</span><span>ui-styling</span>
+      </div>
+    </div>
+    <div class="sources-grid">
+      <div class="source-group">
+        <h4>设计核心</h4>
+        <div class="source-tags">
+          <span class="source-tag">frontend-design</span>
+          <span class="source-tag">frontend-design-3</span>
+          <span class="source-tag">frontend-skill</span>
+          <span class="source-tag">human-optimized-frontend</span>
+          <span class="source-tag">interaction-design</span>
+        </div>
+      </div>
+      <div class="source-group">
+        <h4>UI/UX 系统</h4>
+        <div class="source-tags">
+          <span class="source-tag">ui-design-system</span>
+          <span class="source-tag">ui-skills</span>
+          <span class="source-tag">ui-audit</span>
+          <span class="source-tag">ui-ux-pro-max</span>
+          <span class="source-tag">ux-researcher-designer</span>
+          <span class="source-tag">web-design-guidelines</span>
+        </div>
+      </div>
+      <div class="source-group">
+        <h4>GSAP 动画</h4>
+        <div class="source-tags">
+          <span class="source-tag">gsap-core</span>
+          <span class="source-tag">gsap-timeline</span>
+          <span class="source-tag">gsap-scrolltrigger</span>
+          <span class="source-tag">gsap-react</span>
+          <span class="source-tag">gsap-plugins</span>
+          <span class="source-tag">gsap-utils</span>
+          <span class="source-tag">gsap-frameworks</span>
+          <span class="source-tag">gsap-performance</span>
+        </div>
+      </div>
+      <div class="source-group">
+        <h4>专项设计</h4>
+        <div class="source-tags">
+          <span class="source-tag">design</span>
+          <span class="source-tag">design-system</span>
+          <span class="source-tag">brand</span>
+          <span class="source-tag">slides</span>
+          <span class="source-tag">banner-design</span>
+          <span class="source-tag">ui-styling</span>
+          <span class="source-tag">pinak-frontend-guru</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="footer-logo">FD</span>
+        <p>Frontend Design Skill</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/sunyifeisb-art/frontend-design-skill" target="_blank">GitHub</a>
+        <a href="#hero" data-scroll>回到顶部</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>Unified from 20+ skills. Built with GSAP.</p>
+    </div>
+  </footer>
+
+  <script>
+    gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, Flip, TextPlugin);
+
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let mouseX = 0, mouseY = 0;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 2 + 0.5;
+        this.speedX = (Math.random() - 0.5) * 0.5;
+        this.speedY = (Math.random() - 0.5) * 0.5;
+        this.opacity = Math.random() * 0.5 + 0.1;
+        const colors = ['#00f0ff', '#ff00a0', '#f0ff00', '#ffffff'];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+          this.reset();
+        }
+        const dx = this.x - mouseX;
+        const dy = this.y - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          const force = (120 - dist) / 120;
+          this.x += (dx / dist) * force * 2;
+          this.y += (dy / dist) * force * 2;
+        }
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.opacity;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = '#00f0ff';
+            ctx.globalAlpha = (1 - dist / 120) * 0.15;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      drawConnections();
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    const rainCanvas = document.getElementById('binaryRainCanvas');
+    const rainCtx = rainCanvas.getContext('2d');
+    let rainColumns = [];
+    const rainChars = '01';
+    const rainFontSize = 14;
+
+    function resizeRainCanvas() {
+      rainCanvas.width = window.innerWidth;
+      rainCanvas.height = window.innerHeight;
+      const cols = Math.floor(rainCanvas.width / rainFontSize);
+      rainColumns = [];
+      for (let i = 0; i < cols; i++) {
+        rainColumns.push({
+          x: i * rainFontSize,
+          y: Math.random() * rainCanvas.height,
+          speed: Math.random() * 2 + 1,
+          length: Math.floor(Math.random() * 15 + 5)
+        });
+      }
+    }
+    resizeRainCanvas();
+    window.addEventListener('resize', resizeRainCanvas);
+
+    function animateBinaryRain() {
+      rainCtx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+      rainCtx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
+      rainCtx.font = rainFontSize + "px 'JetBrains Mono', monospace";
+
+      rainColumns.forEach(col => {
+        for (let i = 0; i < col.length; i++) {
+          const char = rainChars[Math.floor(Math.random() * rainChars.length)];
+          const y = col.y - i * rainFontSize;
+          if (y < 0) continue;
+          const brightness = 1 - (i / col.length);
+          if (i === 0) {
+            rainCtx.fillStyle = `rgba(0, 240, 255, ${brightness * 0.8})`;
+            rainCtx.shadowColor = '#00f0ff';
+            rainCtx.shadowBlur = 8;
+          } else {
+            rainCtx.fillStyle = `rgba(0, 240, 255, ${brightness * 0.25})`;
+            rainCtx.shadowBlur = 0;
+          }
+          rainCtx.fillText(char, col.x, y);
+        }
+        rainCtx.shadowBlur = 0;
+        col.y += col.speed;
+        if (col.y - col.length * rainFontSize > rainCanvas.height) {
+          col.y = 0;
+          col.speed = Math.random() * 2 + 1;
+          col.length = Math.floor(Math.random() * 15 + 5);
+        }
+      });
+      requestAnimationFrame(animateBinaryRain);
+    }
+    animateBinaryRain();
+
+    const glow = document.createElement('div');
+    glow.className = 'cursor-glow';
+    document.body.appendChild(glow);
+    document.addEventListener('mousemove', (e) => {
+      glow.style.left = e.clientX + 'px';
+      glow.style.top = e.clientY + 'px';
+    });
+
+    gsap.to('.floating-nav', {
+      opacity: 1,
+      y: 0,
+      duration: 0.8,
+      delay: 0.5,
+      ease: 'power3.out',
+      startAt: { y: -30 }
+    });
+
+    const heroTl = gsap.timeline({ delay: 0.3 });
+
+    heroTl
+      .to('.hero-badge', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', startAt: { y: 20 } })
+      .to('.title-line-1', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', startAt: { y: 60 } }, '-=0.3')
+      .to('.title-line-2', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', startAt: { y: 60 } }, '-=0.6')
+      .to('.title-line-3', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', startAt: { y: 60 } }, '-=0.6')
+      .to('.hero-subtitle', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', startAt: { y: 20 } }, '-=0.4')
+      .to('.hero-desc', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', startAt: { y: 20 } }, '-=0.4')
+      .to('.stat-item', {
+        opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'power3.out', startAt: { y: 30 }
+      }, '-=0.3')
+      .to('.hero-actions', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', startAt: { y: 20 } }, '-=0.3')
+      .to('.hero-scroll-hint', { opacity: 1, duration: 0.6 }, '-=0.2');
+
+    document.querySelectorAll('.stat-item').forEach(item => {
+      const target = parseInt(item.dataset.count);
+      const numEl = item.querySelector('.stat-num');
+      const obj = { val: 0 };
+      gsap.to(obj, {
+        val: target,
+        duration: 2,
+        delay: 1.5,
+        ease: 'power2.out',
+        onUpdate: () => {
+          numEl.textContent = Math.round(obj.val);
+        }
+      });
+    });
+
+    gsap.to('.hero-title', {
+      scrollTrigger: {
+        trigger: '.hero',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true
+      },
+      y: -100,
+      opacity: 0.3
+    });
+
+    gsap.to('.hero-subtitle, .hero-desc', {
+      scrollTrigger: {
+        trigger: '.hero',
+        start: 'top top',
+        end: '50% top',
+        scrub: true
+      },
+      y: -60,
+      opacity: 0
+    });
+
+    document.querySelectorAll('.section-header').forEach(header => {
+      gsap.from(header.children, {
+        scrollTrigger: {
+          trigger: header,
+          start: 'top 80%',
+          toggleActions: 'play none none none'
+        },
+        y: 40,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.15,
+        ease: 'power3.out'
+      });
+    });
+
+    gsap.from('.file-tree', {
+      scrollTrigger: {
+        trigger: '.file-tree-section',
+        start: 'top 70%'
+      },
+      x: -60,
+      opacity: 0,
+      duration: 1,
+      ease: 'power3.out'
+    });
+
+    gsap.to('.detail-panel', {
+      scrollTrigger: {
+        trigger: '.file-detail-panels',
+        start: 'top 70%'
+      },
+      x: 0,
+      opacity: 1,
+      duration: 0.8,
+      stagger: 0.15,
+      ease: 'power3.out'
+    });
+
+    document.querySelectorAll('.tree-folder[data-files]').forEach(folder => {
+      folder.addEventListener('mouseenter', () => {
+        gsap.to(folder, { x: 8, duration: 0.3, ease: 'power2.out' });
+        const count = folder.querySelector('.folder-count');
+        if (count) gsap.to(count, { scale: 1.2, color: '#00f0ff', duration: 0.3 });
+      });
+      folder.addEventListener('mouseleave', () => {
+        gsap.to(folder, { x: 0, duration: 0.3, ease: 'power2.out' });
+        const count = folder.querySelector('.folder-count');
+        if (count) gsap.to(count, { scale: 1, color: '#8a8a9a', duration: 0.3 });
+      });
+    });
+
+    gsap.to('.module-card', {
+      scrollTrigger: {
+        trigger: '.modules-grid',
+        start: 'top 75%'
+      },
+      y: 0,
+      opacity: 1,
+      duration: 0.7,
+      stagger: { amount: 0.8, from: 'start' },
+      ease: 'power3.out'
+    });
+
+    document.querySelectorAll('.module-card').forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        const rx = (y - cy) / cy * -8;
+        const ry = (x - cx) / cx * 8;
+        gsap.to(card, {
+          rotateX: rx,
+          rotateY: ry,
+          transformPerspective: 800,
+          duration: 0.3,
+          ease: 'power2.out'
+        });
+      });
+      card.addEventListener('mouseleave', () => {
+        gsap.to(card, {
+          rotateX: 0,
+          rotateY: 0,
+          duration: 0.5,
+          ease: 'power2.out'
+        });
+      });
+    });
+
+    const cube = document.getElementById('demoBox');
+    let cubeRotX = -20, cubeRotY = 30;
+
+    function animateCube() {
+      cubeRotY += 0.4;
+      cubeRotX = -20 + Math.sin(Date.now() / 2000) * 10;
+      cube.style.transform = `rotateX(${cubeRotX}deg) rotateY(${cubeRotY}deg)`;
+      requestAnimationFrame(animateCube);
+    }
+    animateCube();
+
+    gsap.from('#demoBox', {
+      scrollTrigger: {
+        trigger: '.demo-stage',
+        start: 'top 70%'
+      },
+      scale: 0,
+      opacity: 0,
+      duration: 1.2,
+      ease: 'elastic.out(1, 0.5)'
+    });
+
+    gsap.to('.feature-item', {
+      scrollTrigger: {
+        trigger: '.demo-features',
+        start: 'top 75%'
+      },
+      y: 0,
+      opacity: 1,
+      duration: 0.6,
+      stagger: 0.12,
+      ease: 'power3.out'
+    });
+
+    gsap.to('.source-group', {
+      scrollTrigger: {
+        trigger: '.sources-grid',
+        start: 'top 75%'
+      },
+      y: 0,
+      opacity: 1,
+      duration: 0.7,
+      stagger: 0.15,
+      ease: 'power3.out'
+    });
+
+    document.querySelectorAll('.source-tag').forEach(tag => {
+      tag.addEventListener('mouseenter', () => {
+        gsap.to(tag, { scale: 1.1, duration: 0.2, ease: 'power2.out' });
+      });
+      tag.addEventListener('mouseleave', () => {
+        gsap.to(tag, { scale: 1, duration: 0.2, ease: 'power2.out' });
+      });
+    });
+
+    document.querySelectorAll('a[data-scroll]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) {
+          gsap.to(window, {
+            scrollTo: { y: target, offsetY: 80 },
+            duration: 1.2,
+            ease: 'power3.inOut'
+          });
+        }
+      });
+    });
+
+    gsap.from('.footer-content', {
+      scrollTrigger: {
+        trigger: '.site-footer',
+        start: 'top 90%'
+      },
+      y: 30,
+      opacity: 0,
+      duration: 0.8,
+      ease: 'power3.out'
+    });
+
+    const progressBar = document.createElement('div');
+    progressBar.style.cssText = `
+      position: fixed;
+      top: 0; left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #00f0ff, #ff00a0);
+      z-index: 10000;
+      width: 0%;
+      transition: width 0.1s linear;
+    `;
+    document.body.appendChild(progressBar);
+
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (scrollTop / docHeight) * 100;
+      progressBar.style.width = progress + '%';
+    });
+
+    ScrollTrigger.create({
+      trigger: '.hero',
+      start: 'bottom top+=100',
+      onEnter: () => gsap.to('.floating-nav', {
+        background: 'rgba(10,10,15,0.95)',
+        boxShadow: '0 4px 30px rgba(0,0,0,0.3)',
+        duration: 0.3
+      }),
+      onLeaveBack: () => gsap.to('.floating-nav', {
+        background: 'rgba(10,10,15,0.7)',
+        boxShadow: 'none',
+        duration: 0.3
+      })
+    });
+
+    function glitchEffect() {
+      const title = document.querySelector('.hero-title');
+      if (!title) return;
+      const colors = ['#00f0ff', '#ff00a0', '#f0ff00'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      gsap.to(title, {
+        x: (Math.random() - 0.5) * 8,
+        textShadow: `2px 0 ${randomColor}, -2px 0 ${randomColor}`,
+        duration: 0.05,
+        yoyo: true,
+        repeat: 3,
+        onComplete: () => {
+          gsap.set(title, { x: 0, textShadow: 'none' });
+        }
+      });
+      setTimeout(glitchEffect, Math.random() * 6000 + 4000);
+    }
+    setTimeout(glitchEffect, 5000);
+
+    gsap.to('.hero-bg-grid', {
+      scrollTrigger: {
+        trigger: '.hero',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true
+      },
+      backgroundPosition: '60px 60px',
+      ease: 'none'
+    });
+  </script>
+</body>
+</html>
