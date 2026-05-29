@@ -186,8 +186,18 @@ The first viewport needs a real visual anchor. Decorative texture is not enough.
 
 ### 4.1 Typography
 
-- Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts (Inter, Roboto, Arial, system fonts).
-- Pair a distinctive display font with a refined body font.
+**字体策略按风格分流：**
+
+- **科技 / 未来 / 赛博 / 数据可视化** — 用独特字体建立辨识度：
+  - 等宽数据：`JetBrains Mono`, `Fira Code`, `Space Mono`
+  - 显示标题：选择有性格的无衬线或等宽字体
+- **非科技类（品牌站、落地页、内容页、电商）** — 优先苹果原生字体栈，保证平台原生质感：
+  - 正文字体栈：`-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif`
+  - 显示标题：`-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif`
+  - 仅在需要强调特殊气质时才引入第三方字体
+- **通用规则**：
+  - Pair a distinctive display font with a refined body font.
+  - Avoid generic fonts (Inter, Roboto, Arial) **unless** falling back in the system font stack.
 - Body text baseline: 15-18px equivalent.
 - Heading scale: H1 = body x 2.2-2.6, H2 = body x 1.6-1.9, H3 = body x 1.3-1.5.
 - Line height: body 1.45-1.6, headings 1.15-1.3.
